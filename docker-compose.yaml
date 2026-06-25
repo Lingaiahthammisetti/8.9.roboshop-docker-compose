@@ -1,0 +1,87 @@
+version: '3.8'
+name: roboshop
+networks:
+  default:
+    name: roboshop
+
+services:
+  mysql:
+    image: mysql:v1
+    container_name: mysql
+
+  mongodb:
+    image: mongodb:v1
+    container_name: mongodb
+    
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:v1
+    environment:
+    - RABBITMQ_DEFAULT_USER=roboshop
+    - RABBITMQ_DEFAULT_PASS=roboshop123
+
+  redis:
+    image: redis
+    container_name: redis
+
+  catalogue:
+    image: catalogue:v1
+    container_name: catalogue
+    depends_on:
+    - mongodb
+
+  cart:
+    image: cart:v1
+    container_name: cart
+    depends_on:
+    - redis
+    - catalogue
+
+  user:
+    image: user:v1
+    container_name: user
+    depends_on:
+    - redis
+    - mongodb
+
+  shipping:
+    image: shipping:v1
+    container_name: shipping
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    depends_on:
+    - mysql
+
+  payment:
+    container_name: payment
+    image: payment:v1
+    depends_on:
+    - rabbitmq
+    - user
+    - cart
+
+  web:
+    image: web:v1
+    container_name: web
+    ports:
+    - "80:80"
+    depends_on:
+    - catalogue
+    - cart
+    - user
+    - shipping
+    - payment
+    
+  dispatch:
+    container_name: dispatch
+    image: dispatch:v1
+    depends_on:
+    - rabbitmq
+    
+  debug:
+    container_name: debug
+    image: debug:v1
+    depends_on:
+    - web
